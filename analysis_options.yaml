@@ -1,0 +1,8 @@
+
+include: package:amplify_lints/app.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - lib/models/**    
