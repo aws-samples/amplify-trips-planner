@@ -1,18 +1,17 @@
 import 'dart:io';
 
+import 'package:amplify_trips_planner/common/navigation/router/routes.dart';
+import 'package:amplify_trips_planner/common/ui/upload_progress_dialog.dart';
+import 'package:amplify_trips_planner/common/utils/colors.dart' as constants;
+import 'package:amplify_trips_planner/features/trip/controller/trip_controller.dart';
+import 'package:amplify_trips_planner/features/trip/controller/trips_list_controller.dart';
+import 'package:amplify_trips_planner/features/trip/ui/trip_page/delete_trip_dialog.dart';
+import 'package:amplify_trips_planner/models/Trip.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-
-import 'package:amplify_trips_planner/features/trip/controller/trip_controller.dart';
-import 'package:amplify_trips_planner/common/navigation/router/routes.dart';
-import 'package:amplify_trips_planner/common/utils/colors.dart' as constants;
-
-import 'package:amplify_trips_planner/models/Trip.dart';
-import 'package:amplify_trips_planner/features/trip/ui/trip_page/delete_trip_dialog.dart';
-import 'package:amplify_trips_planner/common/ui/upload_progress_dialog.dart';
 
 class SelectedTripCard extends ConsumerWidget {
   const SelectedTripCard({
@@ -22,7 +21,7 @@ class SelectedTripCard extends ConsumerWidget {
 
   final Trip trip;
 
-  Future<void> uploadImage({
+  Future<bool> uploadImage({
     required BuildContext context,
     required WidgetRef ref,
     required Trip trip,
@@ -30,30 +29,41 @@ class SelectedTripCard extends ConsumerWidget {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile == null) {
-      return;
+      return false;
     }
-
     final file = File(pickedFile.path);
-    showDialog<String>(
+    if (context.mounted) {
+      showDialog<String>(
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
           return const UploadProgressDialog();
-        });
-    await ref.read(tripControllerProvider).uploadFile(file, trip);
+        },
+      );
+
+      await ref
+          .watch(tripControllerProvider(trip.id).notifier)
+          .uploadFile(file, trip);
+    }
+
+    return true;
   }
 
   Future<bool> deleteTrip(
-      BuildContext context, WidgetRef ref, Trip trip) async {
+    BuildContext context,
+    WidgetRef ref,
+    Trip trip,
+  ) async {
     var value = await showDialog<bool>(
-        context: context,
-        builder: (BuildContext context) {
-          return const DeleteTripDialog();
-        });
+      context: context,
+      builder: (BuildContext context) {
+        return const DeleteTripDialog();
+      },
+    );
     value ??= false;
 
     if (value) {
-      await ref.read(tripControllerProvider).delete(trip);
+      await ref.watch(tripsListControllerProvider.notifier).removeTrip(trip);
     }
     return value;
   }
@@ -63,7 +73,7 @@ class SelectedTripCard extends ConsumerWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15.0),
+        borderRadius: BorderRadius.circular(15),
       ),
       elevation: 5,
       child: Column(
@@ -86,17 +96,19 @@ class SelectedTripCard extends ConsumerWidget {
             height: 150,
 
             child: trip.tripImageUrl != null
-                ? Stack(children: [
-                    const Center(child: CircularProgressIndicator()),
-                    CachedNetworkImage(
-                      cacheKey: trip.tripImageKey,
-                      imageUrl: trip.tripImageUrl!,
-                      width: double.maxFinite,
-                      height: 500,
-                      alignment: Alignment.topCenter,
-                      fit: BoxFit.fill,
-                    ),
-                  ])
+                ? Stack(
+                    children: [
+                      const Center(child: CircularProgressIndicator()),
+                      CachedNetworkImage(
+                        cacheKey: trip.tripImageKey,
+                        imageUrl: trip.tripImageUrl!,
+                        width: double.maxFinite,
+                        height: 500,
+                        alignment: Alignment.topCenter,
+                        fit: BoxFit.fill,
+                      ),
+                    ],
+                  )
                 : Image.asset(
                     'images/amplify.png',
                     fit: BoxFit.contain,
@@ -108,8 +120,8 @@ class SelectedTripCard extends ConsumerWidget {
               IconButton(
                 onPressed: () {
                   context.goNamed(
-                    AppRoute.edittrip.name,
-                    params: {'id': trip.id},
+                    AppRoute.editTrip.name,
+                    pathParameters: {'id': trip.id},
                     extra: trip,
                   );
                 },
@@ -121,8 +133,12 @@ class SelectedTripCard extends ConsumerWidget {
                     context: context,
                     trip: trip,
                     ref: ref,
-                  ).then((value) =>
-                      Navigator.of(context, rootNavigator: true).pop());
+                  ).then((value) {
+                    if (value) {
+                      Navigator.of(context, rootNavigator: true).pop();
+                      ref.invalidate(tripControllerProvider(trip.id));
+                    }
+                  });
                 },
                 icon: const Icon(Icons.camera_enhance_sharp),
               ),

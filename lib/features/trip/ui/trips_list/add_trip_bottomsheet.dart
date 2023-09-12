@@ -1,125 +1,94 @@
+import 'package:amplify_trips_planner/common/ui/bottomsheet_text_form_field.dart';
+import 'package:amplify_trips_planner/common/utils/date_time_formatter.dart';
 import 'package:amplify_trips_planner/features/trip/controller/trips_list_controller.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-class AddTripBottomSheet extends HookConsumerWidget {
-  AddTripBottomSheet({
+class AddTripBottomSheet extends ConsumerStatefulWidget {
+  const AddTripBottomSheet({
     super.key,
   });
 
+  @override
+  AddTripBottomSheetState createState() => AddTripBottomSheetState();
+}
+
+class AddTripBottomSheetState extends ConsumerState<AddTripBottomSheet> {
   final formGlobalKey = GlobalKey<FormState>();
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tripNameController = useTextEditingController();
-    final destinationController = useTextEditingController();
-    final startDateController = useTextEditingController();
-    final endDateController = useTextEditingController();
+  final tripNameController = TextEditingController();
+  final destinationController = TextEditingController();
+  final startDateController = TextEditingController();
+  final endDateController = TextEditingController();
 
+  @override
+  Widget build(BuildContext context) {
     return Form(
       key: formGlobalKey,
       child: Container(
         padding: EdgeInsets.only(
-            top: 15,
-            left: 15,
-            right: 15,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 15),
+          top: 15,
+          left: 15,
+          right: 15,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 15,
+        ),
         width: double.infinity,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextFormField(
+            BottomSheetTextFormField(
+              labelText: 'Trip Name',
               controller: tripNameController,
               keyboardType: TextInputType.name,
-              validator: (value) {
-                const validationError = 'Enter a valid trip name';
-                if (value == null || value.isEmpty) {
-                  return validationError;
-                }
-
-                return null;
-              },
-              autofocus: true,
-              autocorrect: false,
-              decoration: const InputDecoration(hintText: "Trip Name"),
-              textInputAction: TextInputAction.next,
             ),
             const SizedBox(
               height: 20,
             ),
-            TextFormField(
-              keyboardType: TextInputType.name,
+            BottomSheetTextFormField(
+              labelText: 'Trip Destination',
               controller: destinationController,
-              autofocus: true,
-              autocorrect: false,
-              decoration: const InputDecoration(hintText: "Trip Destination"),
-              textInputAction: TextInputAction.next,
-              validator: (value) {
-                if (value != null && value.isNotEmpty) {
-                  return null;
-                } else {
-                  return 'Enter a valid destination';
-                }
-              },
+              keyboardType: TextInputType.name,
             ),
-            TextFormField(
-              keyboardType: TextInputType.datetime,
+            const SizedBox(
+              height: 20,
+            ),
+            BottomSheetTextFormField(
+              labelText: 'Start Date',
               controller: startDateController,
-              autofocus: true,
-              autocorrect: false,
-              decoration: const InputDecoration(hintText: "Start Date"),
-              textInputAction: TextInputAction.next,
-              validator: (value) {
-                if (value != null && value.isNotEmpty) {
-                  return null;
-                } else {
-                  return 'Enter a valid date';
-                }
-              },
+              keyboardType: TextInputType.datetime,
               onTap: () async {
-                DateTime? pickedDate = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2101));
+                final pickedDate = await showDatePicker(
+                  context: context,
+                  initialDate: DateTime.now(),
+                  firstDate: DateTime(2000),
+                  lastDate: DateTime(2101),
+                );
 
                 if (pickedDate != null) {
-                  String formattedDate =
-                      DateFormat('yyyy-MM-dd').format(pickedDate);
-                  startDateController.text = formattedDate;
-                } else {}
-              },
-            ),
-            TextFormField(
-              keyboardType: TextInputType.datetime,
-              controller: endDateController,
-              autofocus: true,
-              autocorrect: false,
-              decoration: const InputDecoration(hintText: "End Date"),
-              textInputAction: TextInputAction.next,
-              validator: (value) {
-                if (value != null && value.isNotEmpty) {
-                  return null;
-                } else {
-                  return 'Enter a valid date';
+                  startDateController.text = pickedDate.format('yyyy-MM-dd');
                 }
               },
+            ),
+            const SizedBox(
+              height: 20,
+            ),
+            BottomSheetTextFormField(
+              labelText: 'End Date',
+              controller: endDateController,
+              keyboardType: TextInputType.datetime,
               onTap: () async {
                 if (startDateController.text.isNotEmpty) {
-                  DateTime? pickedDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.parse(startDateController.text),
-                      firstDate: DateTime.parse(startDateController.text),
-                      lastDate: DateTime(2101));
+                  final pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.parse(startDateController.text),
+                    firstDate: DateTime.parse(startDateController.text),
+                    lastDate: DateTime(2101),
+                  );
 
                   if (pickedDate != null) {
-                    String formattedDate =
-                        DateFormat('yyyy-MM-dd').format(pickedDate);
-
-                    endDateController.text = formattedDate;
+                    endDateController.text = pickedDate.format('yyyy-MM-dd');
                   }
                 }
               },
@@ -128,23 +97,26 @@ class AddTripBottomSheet extends HookConsumerWidget {
               height: 20,
             ),
             TextButton(
-                child: const Text('OK'),
-                onPressed: () async {
-                  final currentState = formGlobalKey.currentState;
-                  if (currentState == null) {
-                    return;
+              child: const Text('OK'),
+              onPressed: () async {
+                final currentState = formGlobalKey.currentState;
+                if (currentState == null) {
+                  return;
+                }
+                if (currentState.validate()) {
+                  await ref.watch(tripsListControllerProvider.notifier).addTrip(
+                        name: tripNameController.text,
+                        destination: destinationController.text,
+                        startDate: startDateController.text,
+                        endDate: endDateController.text,
+                      );
+
+                  if (context.mounted) {
+                    context.pop();
                   }
-                  if (currentState.validate()) {
-                    ref.read(tripsListControllerProvider).add(
-                          name: tripNameController.text,
-                          destination: destinationController.text,
-                          startDate: startDateController.text,
-                          endDate: endDateController.text,
-                        );
-                    Navigator.of(context).pop();
-                  }
-                } //,
-                ),
+                }
+              }, //,
+            ),
           ],
         ),
       ),
