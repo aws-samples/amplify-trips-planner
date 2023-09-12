@@ -1,56 +1,38 @@
-import 'package:amplify_trips_planner/features/trip/services/trips_datastore_service.dart';
+import 'package:amplify_trips_planner/features/trip/service/trips_api_service.dart';
 import 'package:amplify_trips_planner/models/Trip.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final tripsRepositoryProvider = Provider<TripsRepository>((ref) {
-  TripsDataStoreService tripsDataStoreService =
-      ref.read(tripsDataStoreServiceProvider);
-  return TripsRepository(tripsDataStoreService);
-});
-
-final tripsListStreamProvider = StreamProvider.autoDispose<List<Trip?>>((ref) {
-  final tripsRepository = ref.watch(tripsRepositoryProvider);
-  return tripsRepository.getTrips();
-});
-
-final pastTripsListStreamProvider =
-    StreamProvider.autoDispose<List<Trip?>>((ref) {
-  final tripsRepository = ref.watch(tripsRepositoryProvider);
-  return tripsRepository.getPastTrips();
-});
-
-final tripProvider =
-    StreamProvider.autoDispose.family<Trip?, String>((ref, id) {
-  final tripsRepository = ref.watch(tripsRepositoryProvider);
-  return tripsRepository.get(id);
+  final tripsAPIService = ref.read(tripsAPIServiceProvider);
+  return TripsRepository(tripsAPIService);
 });
 
 class TripsRepository {
-  TripsRepository(this.tripsDataStoreService);
+  TripsRepository(this.tripsAPIService);
 
-  final TripsDataStoreService tripsDataStoreService;
+  final TripsAPIService tripsAPIService;
 
-  Stream<List<Trip>> getTrips() {
-    return tripsDataStoreService.listenToTrips();
+  Future<List<Trip>> getTrips() {
+    return tripsAPIService.getTrips();
   }
 
-  Stream<List<Trip>> getPastTrips() {
-    return tripsDataStoreService.listenToPastTrips();
+  Future<List<Trip>> getPastTrips() {
+    return tripsAPIService.getPastTrips();
   }
 
   Future<void> add(Trip trip) async {
-    await tripsDataStoreService.addTrip(trip);
+    return tripsAPIService.addTrip(trip);
   }
 
   Future<void> update(Trip updatedTrip) async {
-    await tripsDataStoreService.updateTrip(updatedTrip);
+    return tripsAPIService.updateTrip(updatedTrip);
   }
 
   Future<void> delete(Trip deletedTrip) async {
-    await tripsDataStoreService.deleteTrip(deletedTrip);
+    return tripsAPIService.deleteTrip(deletedTrip);
   }
 
-  Stream<Trip> get(String id) {
-    return tripsDataStoreService.getTripStream(id);
+  Future<Trip> getTrip(String tripId) async {
+    return tripsAPIService.getTrip(tripId);
   }
 }
